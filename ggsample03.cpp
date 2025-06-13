@@ -94,7 +94,19 @@ static void frustum(GLfloat* m, float left, float right, float bottom, float top
 static void perspective(GLfloat* m, float fovy, float aspect, float zNear, float zFar)
 {
   // 【宿題】ここを解答してください（loadIdentity() を置き換えてください）
-  loadIdentity(m);
+  //loadIdentity(m);
+  const GLfloat dz(zFar - zNear);
+  if (dz != 0.0f)
+  {
+    m[5] = 1.0f / tan(fovy * 0.5f);
+    m[0] = m[5] / aspect;
+    m[10] = -(zFar + zNear) / dz;
+    m[11] = -1.0f;
+    m[14] = -2.0f * zFar * zNear / dz;
+    m[1] = m[2] = m[3] = m[4] =
+    m[6] = m[7] = m[8] = m[9] =
+    m[12] = m[13] = m[15] = 0.0f;
+  }
 }
 
 //
@@ -108,7 +120,52 @@ static void perspective(GLfloat* m, float fovy, float aspect, float zNear, float
 static void lookat(GLfloat* m, float ex, float ey, float ez, float tx, float ty, float tz, float ux, float uy, float uz)
 {
   // 【宿題】ここを解答してください（loadIdentity() を置き換えてください）
-  loadIdentity(m);
+  //loadIdentity(m);
+  GLfloat gv[16] = {
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    -ex,-ey,-ez,1,
+  };
+
+  const GLfloat gx(ex - tx);
+  const GLfloat gy(ey - ty);
+  const GLfloat gz(ez - tz);
+  
+  const GLfloat rx(uy * gz - uz * gy);
+  const GLfloat ry(uz * gx - ux * gz);
+  const GLfloat rz(ux * gy - uy * gx);
+
+  
+  const GLfloat sx(gy * rz - gz * ry);
+  const GLfloat sy(gz * rx - gx * rz);
+  const GLfloat sz(gx * ry - gy * rx);
+  
+  const GLfloat s2(sx * sx + sy * sy + sz * sz);
+  if (s2 == 0.0f) loadIdentity(m);
+  
+  GLfloat rv[16];
+
+  
+  const GLfloat r(sqrt(rx * rx + ry * ry + rz * rz));
+  rv[0] = rx / r;
+  rv[4] = ry / r;
+  rv[8] = rz / r;
+  
+  const GLfloat s(sqrt(s2));
+  rv[1] = sx / s;
+  rv[5] = sy / s;
+  rv[9] = sz / s;
+  
+  const GLfloat g(sqrt(gx * gx + gy * gy + gz * gz));
+  rv[2] = gx / g;
+  rv[6] = gy / g;
+  rv[10] = gz / g;
+
+  rv[3] = rv[7] = rv[11] = rv[12] = rv[13] = rv[14] = 0.0f;
+  rv[15] = 1.0f;
+
+  multiply(m, rv, gv);
 }
 
 //
@@ -190,6 +247,9 @@ int GgApp::main(int argc, const char* const* argv)
 
     // uniform 変数 mc に変換行列 mc を設定する
     // 【宿題】ここを解答してください（uniform 変数 mc のインデックスは変数 mcLoc に入っています）
+
+    // uniform 変数 mc に配列 mc の内容を格納する
+    glUniformMatrix4fv(mcLoc, 1, GL_FALSE, mc);
 
     // 描画に使う頂点配列オブジェクトの指定
     glBindVertexArray(vao);
